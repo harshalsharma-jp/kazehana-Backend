@@ -643,6 +643,9 @@ def article(slug):
 
     return jsonify(get_article_by_slug(slug))
 
+@app.route("/articles-read", methods=["GET"])
+def articles_read():
+    return jsonify(get_all_articles())
 
 @app.route("/")
 def home():
