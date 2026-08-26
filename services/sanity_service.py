@@ -58,8 +58,11 @@ def get_all_articles():
 
 def get_article_by_slug(slug):
 
-    query = """
-    *[_type == "article" && slug.current == $slug][0]{
+    # Escape the slug before putting it into GROQ
+    safe_slug = slug.replace("\\", "\\\\").replace('"', '\\"')
+
+    query = f'''
+    *[_type == "article" && slug.current == "{safe_slug}"][0] {{
         title,
         "slug": slug.current,
         excerpt,
@@ -69,8 +72,8 @@ def get_article_by_slug(slug):
         content,
         featured,
         tags
-    }
-    """
+    }}
+    '''
 
     url = (
         f"https://{PROJECT_ID}.api.sanity.io/"
@@ -81,15 +84,12 @@ def get_article_by_slug(slug):
         "Authorization": f"Bearer {TOKEN}"
     }
 
-    params = {
-        "query": query,
-        "$slug": slug
-    }
-
     response = requests.get(
         url,
         headers=headers,
-        params=params
+        params={
+            "query": query
+        }
     )
 
     response.raise_for_status()
