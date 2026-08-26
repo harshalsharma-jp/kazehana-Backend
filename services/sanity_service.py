@@ -59,7 +59,7 @@ def get_all_articles():
 def get_article_by_slug(slug):
 
     query = """
-    *[_type == "article" && slug.current == $slug][0] {
+    *[_type == "article" && slug.current == $slug][0]{
         title,
         "slug": slug.current,
         excerpt,
@@ -72,7 +72,28 @@ def get_article_by_slug(slug):
     }
     """
 
-    return run_query(
-        query,
-        {"$slug": slug}
+    url = (
+        f"https://{PROJECT_ID}.api.sanity.io/"
+        f"v{API_VERSION}/data/query/{DATASET}"
     )
+
+    headers = {
+        "Authorization": f"Bearer {TOKEN}"
+    }
+
+    params = {
+        "query": query,
+        "$slug": slug
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+        params=params
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    return data.get("result")
