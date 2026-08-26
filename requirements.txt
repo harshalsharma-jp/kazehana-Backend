@@ -1,0 +1,11 @@
+Flask
+Flask-Cors
+python-dotenv
+mysql-connector-python
+groq
+gunicorn
+requests
+SANITY_PROJECT_ID
+SANITY_DATASET
+SANITY_API_VERSION
+SANITY_TOKEN
