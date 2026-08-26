@@ -442,10 +442,21 @@ def create_user(user_id, username, password):
 
 
 def ensure_test_user():
+    conn = get_connection()
+    cursor = conn.cursor()
+
     try:
-        create_user("test_user", "test", "test")
-    except:
-        pass
+        cursor.execute(
+            "SELECT 1 FROM users WHERE user_id = %s",
+            ("test_user",)
+        )
+
+        if cursor.fetchone() is None:
+            create_user("test_user", "test", "test")
+
+    finally:
+        cursor.close()
+        conn.close()
 
 def get_user(username):
 
