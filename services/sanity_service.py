@@ -1,22 +1,47 @@
 import os
 import requests
-import urllib.parse
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get values from .env
 PROJECT_ID = os.getenv("SANITY_PROJECT_ID")
 DATASET = os.getenv("SANITY_DATASET")
 API_VERSION = os.getenv("SANITY_API_VERSION")
 TOKEN = os.getenv("SANITY_TOKEN")
-headers = {
+
+BASE_URL = (
+    f"https://{PROJECT_ID}.api.sanity.io/"
+    f"v{API_VERSION}/data/query/{DATASET}"
+)
+
+HEADERS = {
     "Authorization": f"Bearer {TOKEN}"
 }
 
+
+def run_query(query, params=None):
+
+    response = requests.get(
+        BASE_URL,
+        headers=HEADERS,
+        params={
+            "query": query,
+            **(params or {})
+        },
+        timeout=20
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    return data.get("result")
+
+
 def get_all_articles():
+
     query = """
-    *[_type == "article"]{
+    *[_type == "article"] | order(_createdAt desc) {
         title,
         "slug": slug.current,
         excerpt,
@@ -28,35 +53,13 @@ def get_all_articles():
     }
     """
 
-    url = (
-        f"https://{PROJECT_ID}.api.sanity.io/"
-        f"v{API_VERSION}/data/query/{DATASET}"
-    )
-
-    headers = {
-        "Authorization": f"Bearer {TOKEN}"
-    }
-
-    params = {
-        "query": query
-    }
-
-    response = requests.get(
-        url,
-        headers=headers,
-        params=params
-    )
-
-
-    data = response.json()
-    return data["result"]
-
+    return run_query(query)
 
 
 def get_article_by_slug(slug):
 
     query = """
-    *[_type == "article" && slug.current == $slug][0]{
+    *[_type == "article" && slug.current == $slug][0] {
         title,
         "slug": slug.current,
         excerpt,
@@ -69,23 +72,7 @@ def get_article_by_slug(slug):
     }
     """
 
-    url = (
-        f"https://{PROJECT_ID}.api.sanity.io/"
-        f"v{API_VERSION}/data/query/{DATASET}"
+    return run_query(
+        query,
+        {"$slug": slug}
     )
-
-    headers = {
-        "Authorization": f"Bearer {TOKEN}"
-    }
-
-    params = {
-        "query": query,
-        "$slug": f'"{slug}"'
-    }
-    response = requests.get(
-        url,
-        headers=headers,
-        params=params
-    )
-
-    return response.json()
