@@ -4,4 +4,3 @@ python-dotenv
 mysql-connector-python
 groq
 gunicorn
-requests
