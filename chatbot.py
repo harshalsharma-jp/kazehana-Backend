@@ -87,7 +87,7 @@ def save_message(user_id, role, message):
     cursor.close()
     conn.close()
 
-def get_last_n_messages(user_id, n=50):
+def get_last_n_messages(user_id, n=20):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -202,7 +202,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client =Groq(api_key = GROQ_API_KEY)
 
 def call_groq(user_input, user_id):
-    past = get_last_n_messages(user_id, 50)
+    past = get_last_n_messages(user_id, 20)
     messages = [
         {
             "role": "system",
@@ -312,8 +312,6 @@ If a user asks whether you are a real person, clearly state that you are an AI J
 
 def get_responses(user_input, user_id):
     text = user_input.lower().strip()
-
-    save_message(user_id, "user", user_input)
 
     for rule in RULES:
         for pattern in rule["patterns"]:
