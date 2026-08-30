@@ -143,7 +143,6 @@ def ensure_test_user():
     cursor = conn.cursor()
 
     try:
-        # Check if test_user already exists
         cursor.execute(
             "SELECT user_id FROM users WHERE user_id = %s",
             ("test_user",)
@@ -317,6 +316,7 @@ def get_responses(user_input, user_id):
         for pattern in rule["patterns"]:
             if re.search(pattern, text):
                 reply = random.choice(rule["responses"])
+                save_message(user_id, "user", user_input)
                 save_message(user_id, "assistant", reply)
                 return reply
     reply = call_groq(user_input, user_id)
