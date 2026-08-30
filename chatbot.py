@@ -69,8 +69,9 @@ def init_db():
         )
     """)
 
-    cursor.close()
     conn.commit()
+    cursor.close()
+    conn.close()
 
 def save_message(user_id, role, message):
     conn = get_connection()
@@ -137,9 +138,40 @@ def create_user(user_id, username, password):
         conn.close()
 
 def ensure_test_user():
-    if not get_user("test"):
-        create_user("test_user", "test", "test")
 
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Check if test_user already exists
+        cursor.execute(
+            "SELECT user_id FROM users WHERE user_id = %s",
+            ("test_user",)
+        )
+
+        user = cursor.fetchone()
+
+        if not user:
+            password_hash = generate_password_hash("test")
+
+            cursor.execute(
+                """
+                INSERT INTO users (user_id, username, password)
+                VALUES (%s, %s, %s)
+                """,
+                ("test_user", "test_guest", password_hash)
+            )
+
+            conn.commit()
+            print("Test user created successfully")
+
+    except mysql.connector.Error as error:
+        print(f"Test user error: {error}")
+
+    finally:
+        cursor.close()
+        conn.close()
+        
 def get_user(username):
 
     conn = get_connection()
@@ -280,6 +312,8 @@ If a user asks whether you are a real person, clearly state that you are an AI J
 
 def get_responses(user_input, user_id):
     text = user_input.lower().strip()
+
+    save_message(user_id, "user", user_input)
 
     for rule in RULES:
         for pattern in rule["patterns"]:
