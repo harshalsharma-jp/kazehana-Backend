@@ -1,10 +1,10 @@
+#__________*IMPORTS*__________#
 import re
-import random 
-import mysql.connector 
-from datetime import datetime 
-import requests
-import os
+import random
 from dotenv import load_dotenv
+import os
+import mysql.connector
+from groq import Groq
 from flask import Flask, request, jsonify
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -14,318 +14,25 @@ from services.sanity_service import (
     get_article_by_slug
 )
 
+#__________*RULES*__________#
 
-#_______________________________________________________________________
-#Introduction 
-#_______________________________________________________________________
 RULES = [
     {
-        "patterns":[r"\bhi\b",
-                    r"\bhello\b",
-                    r"\bhey\b",
-                    r"\bhello there\b",
-                    r"\bhi bro\b",
-                    r"\bwhats up\b",
-                    r"\bwhat's up\b",
-                    r"\bhow are you\b",
-                    r"\bwhat are you doing\b"],
-        "responses":["初めまして、風花です。よろしくお願いします。/はじめまして、かぜはなです。よろしくおねがいします。(hajimemashite,Kazehana desu. Yoroshiku Onegaishimasu.)"]
+        "patterns": [
+            r"\bhi\b",
+            r"\bhello\b",
+            r"\bhey\b",
+            r"\bwhats up\b"
+        ],
+
+        "responses":[
+            "初めまして、風花です。よろしくお願いします。/はじめまして、かぜはなです。よろしくおねがいします。(hajimemashite,Kazehana desu. Yoroshiku Onegaishimasu.)"
+        ]
     }
 ]
 
-RULES.extend([
-    {
-        "patterns": [r"\bwhat's? your name\b",
-                     r"\bwhats your name\b",
-                     r"\bwhats ur name\b",
-                     r"\bwhat's ur name\b",
-                     r"\bwho are you\b",
-                     r"\bwho are you\b",
-                     r"\bwho ru\b",
-                     r"\bwho r u\b",
-                     r"\banatano namae wa\b",
-                     r"\banatano namaewa\b",
-                     r"\bur name\b",
-                     r"\byour name\b",
-                     r"\byou'r name\b"],
-        "responses":["hi! im 風花/かぜはな(kazehana)","初めまして、風花です。よろしくお願いします。/はじめまして、かぜはなです。よろしくおねがいします。(hajimemashite, Kazehana desu. Yoroshiku Onegaishimasu.)"]
-    },
-    {
-        "patterns": [r"\bwho created you\b",
-                     r"\bwho created u\b",
-                     r"\bwho is your owner\b",
-                     r"\bwho is ur owner\b",
-                     r"\bwho made u\b",
-                     r"\bwho made you\b",
-                     r"\bwho is ur master\b",
-                     r"\bwho is your owner\b"],
-        "responses":["ハーシャル・シャルマ(Harshal Shamra)"]
-    },
-])
-#_______________________________________________________________________
-#Greatings in japan (aisatsu)
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\btell me how japanese people of japan greats each other\b",
-                     r"\bgreatings of japan\b",
-                     r"\bgreatings\b",
-                     r"\bgreating\b",
-                     r"\bhow to great japanese people\b",
-                     r"\bhow japanese people greats each othere\b" ],
-        "responses":["""Greetings & Respect (Aisatsu)
-Greetings are extremely important in Japanese culture. People often bow while greeting each other. The depth of the bow shows respect.
+#__________*ENVIRONMENT_VARIABLES*__________#
 
-Common greetings:
-
-Ohayou gozaimasu → Good morning
-
-Konnichiwa → Hello
-
-Konbanwa → Good evening
-
-Arigatou gozaimasu → Thank you
-
-Sumimasen → Excuse me / Sorry
-
-Fun Fact
-Japanese people may bow even while talking on the phone because respect is deeply habitual."""]
-    }
-])
-#_______________________________________________________________________
-# 🇯🇵 Japanese school life 
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bjapanese school life\b",
-                     r"\btell me about japanese school life\b",
-                     r"\bhow japanese students behave in school\b",
-                     r"\btell me about japanese school\b",
-                     r"\btell me about school life of japan\b",
-                     r"\bwhat japanese students do in school\b",
-                     r"\bhow japanese students keep there school clean\b"],
-        "responses":["""Japanese students often clean their classrooms themselves instead of relying on janitors. This teaches discipline and responsibility.
-
-School features:
-
-Indoor shoes called “uwabaki”
-School festivals (bunkasai)
-Sports festivals (undoukai)
-Club activities after school
-Fun Fact
-
-Many anime school scenes are inspired by real Japanese school traditions."""]
-    }
-])
-#_______________________________________________________________________
-# japanese food culture
-
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bjapanese food\b",
-                     r"\bwhat japanese people really eat\b",
-                     r"\bfood of japan\b",
-                     r"\bwhat japanese people eat\b",
-                     r"\bjapanese food culture\b",
-                     r"\bfood of japa\b",
-                     r"\bjapanese food\b",
-                     r"\btell me about japanese food\b"],
-        "responses":["""Food in Japan focuses on balance, presentation, and seasonality.
-
-Popular foods:
-
-Sushi
-Ramen
-Tempura
-Onigiri
-Matcha desserts
-
-People usually say:
-
-“Itadakimasu” before eating
-“Gochisousama” after finishing
-Fun Fact
-
-Slurping noodles is considered normal and can show enjoyment."""]
-    }
-])
-#_______________________________________________________________________
-# Japansese festivals (matsuri)
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bjapaese festivals\b",
-                     r"\bwhat are japanese festivals\b",
-                     r"\btell me about japanese festivals\b",
-                     r"\bhow japanese people celebrate their festivals\b"],
-        "responses":["""Japanese festivals celebrate seasons, traditions, and local gods.
-
-Popular festivals:
-
-Hanami → Cherry blossom viewing
-Tanabata → Star festival
-Gion Matsuri → Famous Kyoto festival
-Nebuta Matsuri → Lantern festival
-Fun Fact
-
-Many festivals include yukata, lanterns, fireworks, and street food stalls."""]
-    }
-])
-#_______________________________________________________________________
-# anime and manga culture of Japan
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bmanga and anime\b",
-                     r"\bmanga","anime\b",
-                     r"\btellme about the manga and anime\b",
-                     r"\btell me about the manga and anime culture of japan\b",
-                     r"\bmanga and anime culture of japan\b",
-                     r"\banime and manga culture of japan\b"],
-        "responses":["""Anime and manga are a major part of modern Japanese pop culture.
-
-Famous genres:
-
-Shounen → Action/adventure
-Slice of Life
-Mecha
-Isekai
-Romance
-and my fav. anime/manga is One-Piece
-Fun Fact
-
-Japan has manga cafés where people can read thousands of manga overnight."""]
-    }
-])
-#_______________________________________________________________________
-# Japanese Etiquette
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bjapanese etiquette\b",
-                     r"\btell me about japanese etiquette\b",
-                     r"\bwhat are japanese etiquette\b",
-                     r"\bexplain about japanese etiquette\b"],
-        "responses":["""Etiquette is highly valued in Japan.
-
-Important manners:
-
-Remove shoes before entering homes
-Do not talk loudly on trains
-Stand in queues properly
-Give and receive items with both hands
-Fun Fact
-
-Eating while walking is considered rude in many areas."""]
-    }
-])
-#_______________________________________________________________________
-#traditional clothing
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bwhat is the traditional cloths of japan\b",
-                     r"\btell me about the treditional cloths of japan\b",
-                     r"\bwhat japanese people wear in old time\b",
-                     r"\btreditional dress of japan\b",
-                     r"\btraditional cloths of japan\b"],
-        "responses":["""The kimono is one of Japan’s most famous traditional outfits.
-
-Types:
-
-Kimono → Formal traditional wear
-Yukata → Light summer version
-Hakama → Traditional pleated pants/skirt
-Fun Fact
-
-Modern Japanese people mostly wear western clothes daily but still use kimono during festivals and ceremonies."""]
-    }
-])
-#_______________________________________________________________________
-#japanese seasons
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bwhat are sesons in japan\b",
-                     r"\bname all seasons of japan\b",
-                     r"\btell me about all sesons of japan\b",
-                     r"\bname seasons of japan\b"],
-        "responses":["""Japan strongly values seasonal beauty.
-
-Seasons:
-
-Spring → Sakura blossoms
-Summer → Festivals and fireworks
-Autumn → Red maple leaves
-Winter → Snow festivals and hot springs
-Fun Fact
-
-Cherry blossom forecasts are broadcast on Japanese TV every year."""]
-    }
-])
-#_______________________________________________________________________
-#Japanese technology and inovations
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bjapanese technology and inovation\b",
-                     r"\btell me about japanese technology and inovation\b",
-                     r"\bjapanese technology","tell me about japanese technology\b",
-                     r"\bwhat inovations japan has done\b"],
-        "responses":["""Japan is famous for robotics, gaming, and advanced transport systems.
-
-Known for:
-
-Bullet trains (Shinkansen)
-Robotics
-Gaming companies
-Vending machines everywhere
-Fun Fact
-
-Some vending machines in Japan sell umbrellas, ramen, and even hot meals."""]
-    }
-])
-#_______________________________________________________________________
-# Japanese SHrines and Temples
-#_______________________________________________________________________
-RULES.extend([
-    {
-        "patterns": [r"\bwhat is the religion of japan\b",
-                     r"\btell me about the religion of japan\b",
-                     r"\bwhich religion japans follow\b",
-                     r"\bjapanese shrines and temples\b",
-                     r"\btell me about japanese shrines and temples\b"],
-        "responses":["""Japan has both Shinto shrines and Buddhist temples.
-
-Differences:
-
-Shrines usually have torii gates
-Temples often have large bells and incense
-Fun Fact
-
-People visit shrines during New Year for good luck."""]
-    }
-])
-
-#_______________________________________________________________________
-# Database
-#_______________________________________________________________________
-def get_responses(user_input):
-    text = user_input.lower().strip()
-
-    for rule in RULES:
-        for pattern in rule["patterns"]:
-            if re.search(pattern, text, re.IGNORECASE):
-                return random.choice(rule["responses"])
-
-def get_dynamic_responses(response):
-    if response == "__TIME__":
-        return f"The time is {datetime.now().strftime('%I:%M) %p')}"
-    if response == "__Date__":
-        return f"Today is {datetime.now().strftime('%A, %B %d, %Y')}"
-    return response
-from dotenv import load_dotenv
 load_dotenv()
 
 DB_CONFIG = {
@@ -335,79 +42,70 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME")
 }
 
+#__________*FUNCTIONS*__________#
 
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
-
 
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-
-
-    cursor.execute(""" 
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-                   user_id VARCHAR(255) PRIMARY KEY,
-                   username VARCHAR(100),
-                   password VARCHAR(255)
-                   ) 
-                  """ )
-    
-
+                    user_id VARCHAR(40) PRIMARY KEY,
+                    username VARCHAR(20) UNIQUE NOT NULL,
+                    PASSWORD VARCHAR(255) NOT NULL
+                    )
+                    """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS history (
-                   id INT AUTO_INCREMENT PRIMARY KEY,
-                   user_id VARCHAR(255),
-                   role VARCHAR(50),
-                   message TEXT,
-                   timestamp DATETIME,
-                   FOREIGN KEY (user_id) REFERENCES users(user_id)
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(40),
+                    role VARCHAR(50),
+                    message TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
         )
     """)
 
-
+    cursor.close()
     conn.commit()
-    conn.close()
-
 
 def save_message(user_id, role, message):
     conn = get_connection()
-    cursor = conn.cursor()
-
+    cursor =conn.cursor()
 
     cursor.execute(
-        "INSERT INTO history (user_id, role, message, timestamp) VALUES (%s, %s, %s, %s)",
-        (user_id, role, message, datetime.now())
+        "INSERT INTO history (user_id, role, message) VALUES (%s, %s, %s)",
+        (user_id, role, message)
     )
 
     conn.commit()
+
+    cursor.close()
     conn.close()
 
-
-def get_last_n_messages(user_id, n=20):
+def get_last_n_messages(user_id, n=50):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT role, message FROM history
-                   WHERE user_id = %s
-                   ORDER BY id DESC
-                   LIMIT %s
+                    WHERE user_id = %s
+                    ORDER BY id DESC
+                    LIMIT %s
     """, (user_id, n))
 
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     return list(reversed(rows))
 
-
-
 def create_user(user_id, username, password):
-
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor= conn.cursor()
 
     try:
 
@@ -416,7 +114,7 @@ def create_user(user_id, username, password):
         cursor.execute(
             """
             INSERT INTO users(user_id, username, password)
-            VALUES(%s, %s, %s)
+            VaLUES(%s, %s, %s)
             """,
             (
                 user_id,
@@ -426,12 +124,10 @@ def create_user(user_id, username, password):
         )
 
         conn.commit()
-
         return True
-
     except mysql.connector.Error as error:
 
-        print("Create user error:", error)
+        print(f"create user error: {error}")
 
         return False
 
@@ -440,32 +136,16 @@ def create_user(user_id, username, password):
         cursor.close()
         conn.close()
 
-
 def ensure_test_user():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-            "SELECT 1 FROM users WHERE user_id = %s",
-            ("test_user",)
-        )
-
-        if cursor.fetchone() is None:
-            create_user("test_user", "test", "test")
-
-    finally:
-        cursor.close()
-        conn.close()
+    if not get_user("test"):
+        create_user("test_user", "test", "test")
 
 def get_user(username):
 
     conn = get_connection()
-
     cursor = conn.cursor(dictionary=True)
 
     try:
-
         cursor.execute(
             """
             SELECT *
@@ -478,154 +158,141 @@ def get_user(username):
         return cursor.fetchone()
 
     finally:
-
         cursor.close()
         conn.close()
-
 
 def user_exists(username):
     return get_user(username) is not None
 
-#_______________________________________________________________________
-#API
-#_______________________________________________________________________
-import os
+    #__________*/API/*__________#
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-from groq import Groq
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client =Groq(api_key = GROQ_API_KEY)
 
 def call_groq(user_input, user_id):
-
-    past = get_last_n_messages(user_id, 20)
-    
+    past = get_last_n_messages(user_id, 50)
     messages = [
         {
             "role": "system",
             "content": """
-You are Kazehana.
+You are **Kazehana**, a friendly and knowledgeable Japanese learning and culture assistant.
 
-You teach authentic Japanese culture, language, traditions, etiquette, history, daily life, and society.
+Your purpose is to teach users about authentic Japanese **culture, language, traditions, etiquette, history, daily life, and society** in a clear, accurate, and educational way.
 
-Avoid stereotypes and social media myths.
+## Core rules
 
-Always reply in this format:
+* Prioritize accuracy, authenticity, and nuance.
+* Avoid stereotypes, exaggerated anime portrayals, social media myths, and overgeneralizations.
+* Do not present something as true for all Japanese people if it varies by region, generation, person, or situation.
+* If a topic is uncertain, controversial, or has multiple interpretations, explain this clearly.
+* Never invent facts, traditions, Japanese words, slang, or cultural practices.
+* Be friendly and natural, not robotic.
 
-🇯🇵 Japanese:
-<Japanese response>
+## Response format
 
-🇬🇧 English:
-<English translation>
+Always reply in exactly this format:
 
-Keep Japanese natural and accurate.
+🇯🇵 **Japanese:** <Japanese response>
 
-If the user asks about Japan, explain clearly and educationally.
+🇬🇧 **English:** <Natural English translation>
 
-If the user asks in English, still provide both Japanese and English.
+Both sections must communicate the same overall meaning, but do **not** translate word-for-word. Write naturally in both languages.
 
-If any one ask who make you or like this always reply ハーシャル・シャルマ(Harshal Shamra)
+## Japanese language rules
+
+* Use natural, modern Japanese appropriate to the context.
+* Use simple Japanese suitable for learners.
+* Prefer **hiragana and katakana**.
+* Use only common **JLPT N5–N4 level kanji** whenever possible.
+* Avoid unnecessarily difficult kanji and advanced grammar.
+* Do not force a direct translation from English into Japanese. Express the idea naturally as a Japanese speaker would.
+* Use casual Japanese by default, but use polite or neutral Japanese when the situation requires it, such as formal explanations, etiquette, historical topics, or respectful subjects.
+* Keep the Japanese understandable for learners while remaining natural.
+
+## Osaka dialect and Japanese slang
+
+* You may naturally use **Osaka/Kansai dialect** when it fits the context, but do **not** force it into every response.
+* When using Osaka/Kansai dialect or Japanese slang, use it accurately and naturally.
+* Do not replace standard Japanese with dialect unless the user asks for dialect specifically.
+* If you use a Japanese slang word or dialect expression, explain it in the English section using this format:
+
+**[Japanese word/expression] ([romaji]) — [meaning]**
+
+Example:
+**めっちゃ (meccha) — very/really; commonly used in casual Japanese and Kansai speech.**
+
+Do not overload every response with slang explanations. Only include them when relevant.
+
+## When answering questions about Japan
+
+* Explain clearly and educationally.
+* Give useful context instead of only short answers.
+* Distinguish between traditional customs, modern practices, regional differences, and personal preferences when relevant.
+* If the user asks about Japanese culture, explain what is common while avoiding statements such as “all Japanese people do this.”
+* For historical topics, clearly separate historical facts from myths, legends, folklore, and modern interpretations.
+* For etiquette questions, explain what is generally appropriate and mention important exceptions when relevant.
+
+## Language-learning behavior
+
+* If the user writes in English, still provide both Japanese and English.
+* If the user writes in Japanese, correct major mistakes gently when useful and provide a natural version.
+* When teaching vocabulary or expressions, prioritize natural phrases that Japanese people actually use.
+* Do not teach outdated, unnatural, overly textbook-like, or fake Japanese as everyday speech.
+* Keep explanations simple unless the user asks for more detail.
+
+Your goal is to make the user feel like they are learning from a knowledgeable Japanese friend and teacher: **accurate, natural, clear, welcoming, and educational**.
+
+
+If a user asks:
+
+Who made you?
+Who created you?
+Who developed you?
+Who is your creator?
+Who built you?
+
+Answer:
+
+ハーシャル・シャルマ (Harshal Sharma) created and developed Kazehana.
+
+Do not answer that OpenAI, Groq, or any underlying AI model created or developed Kazehana.
+
+If a user specifically asks what AI model, API, or technology powers you, answer honestly based only on the information available to you. Do not invent technical details.
+
+If a user asks whether you are a real person, clearly state that you are an AI Japanese conversation and learning assistant.
 """
         }
     ]
 
     for role, msg in past:
         api_role = "user" if role == "user" else "assistant"
-        messages.append({"role": api_role, "content": msg})
+        messages.append({
+            "role": api_role,
+            "content": msg
+            })
 
     messages.append({"role": "user", "content": user_input})
     response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=messages
+            model = "openai/gpt-oss-120b",
+            messages = messages
     )
     return response.choices[0].message.content
-    
-def get_response(user_input, user_id):
-        text = user_input.lower().strip()
-        
-        save_message(user_id, "user", user_input)
 
-
-        for rule in RULES:
-            for pattern in rule["patterns"]:
-                if re.search(pattern, text):
-                    reply = random.choice(rule["responses"])
-                    save_message(user_id, "bot", reply)
-                    return reply
-        reply = call_groq(user_input, user_id)
-        save_message(user_id, "bot", reply)
-        return reply
-
-
-load_dotenv()
-
-api_key =os.getenv("GROQ_API_KEY")
-
-def call_api(user_input):
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "openai/gpt-oss-120b",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": """
-                    You are a native Japanese speaker from Osaka.
-
-             Always reply in this format:
-             Japanese / English translation
-
-             Example:
-             こんにちは！ / Hello!
-
-             Speak naturally like a real Japanese person.
-             Do NOT translate literally from English.
-             Use casual Japanese and Osaka slang unless asked otherwise.
-
-             Use simple Japanese with hiragana when possible.
-             Avoid difficult kanji unless necessary.
-            """
-                },
-                
-                {"role": "user", "content": user_input}
-            ]
-        }
-        response = requests.post(url, headers=headers, json=data)
-
-        result = response.json()
-
-        return result["choices"][0]["message"]["content"]
-    
-    except Exception as e:
-        print("Groq API Eror:", e)
-        return None
-
-def get_response_api(user_input):
+def get_responses(user_input, user_id):
     text = user_input.lower().strip()
 
     for rule in RULES:
         for pattern in rule["patterns"]:
-            if re.search(pattern, text, re.IGNORECASE):
-                return random.choice(rule["responses"])
-            
-    api_response = call_api(user_input)
+            if re.search(pattern, text):
+                reply = random.choice(rule["responses"])
+                save_message(user_id, "assistant", reply)
+                return reply
+    reply = call_groq(user_input, user_id)
+    save_message(user_id, "user", user_input)
+    save_message(user_id, "assistant", reply)
+    return reply
 
-    if api_response and api_response.strip():
-        return api_response
-    
-    return "I don't understand that yet. Try asking something else!!"
-            
-#_______________________________________________________________________
-#bot instructions  Flask
-#_______________________________________________________________________
-
-
+#__________*FLASK_WORK*__________#
 
 app = Flask(__name__)
 
@@ -634,56 +301,55 @@ ensure_test_user()
 
 CORS(app)
 
+@app.route("/")
+def home():
+    return "Backgroung is perfectally fine"
+
 @app.route("/articles", methods=["GET"])
 def articles():
     return jsonify(get_all_articles())
-
-@app.route("/article/<slug>", methods=["GET"])
-def article(slug):
-
-    return jsonify(get_article_by_slug(slug))
 
 @app.route("/articles-read", methods=["GET"])
 def articles_read():
     return jsonify(get_all_articles())
 
-@app.route("/")
-def home():
-    return "Kazehana Backend Running 🌸"
+@app.route("/article/<slug>", methods=["GET"])
+def article(slug):
+    article_data = get_article_by_slug(slug)
 
+    if not article_data:
+        return jsonify({
+            "error": "Article ot found"
+        }), 404
+
+
+    return jsonify(article_data)
 
 @app.route("/chat", methods=["POST"])
 def chat():
-
     data = request.get_json() or {}
 
     user_message = data.get("message", "").strip()
-
     user_id = data.get("user_id")
 
     if not user_message:
-
         return jsonify({
-            "error": "Message is required."
+            "error": "Message is required"
         }), 400
-
     if not user_id or user_id == "guest":
 
         user_id = "test_user"
 
-
-    reply = get_response(
+    reply = get_responses(
         user_message,
         user_id
     )
-
 
     return jsonify({
         "reply": reply
     })
 
-
-@app.route("/register", methods=["POST"])
+@app.route("/register", methods =["POST"])
 def register():
 
     data = request.get_json() or {}
@@ -700,21 +366,19 @@ def register():
     if len(username) < 3:
         return jsonify({
             "success": False,
-            "message": "Username must be at least 3 characters."
+            "message": "Username must be atleast of 3 characters."
         }), 400
 
     if len(password) < 6:
         return jsonify({
             "success": False,
-            "message": "Password must be at least 6 characters."
+            "message": "password must be atleast of 6 characters.."
         }), 400
-
     if user_exists(username):
         return jsonify({
             "success": False,
-            "message": "Username already exists."
-        }), 409
-
+            "message": "username alrady exists try different one."
+        }), 400
     user_id = str(uuid.uuid4())
 
     success = create_user(
@@ -729,17 +393,16 @@ def register():
             "message": "Account created successfully.",
             "user_id": user_id,
             "username": username
+
         }), 201
 
     return jsonify({
         "success": False,
-        "message": "Registration failed."
+        "message": "Registeration faild."
     }), 500
-
 
 @app.route("/login", methods=["POST"])
 def login():
-
     data = request.get_json() or {}
 
     username = data.get("username", "").strip()
@@ -748,7 +411,7 @@ def login():
     if not username or not password:
         return jsonify({
             "success": False,
-            "message": "Username and password are required."
+            "message": "username and password are required."
         }), 400
 
     user = get_user(username)
@@ -760,24 +423,14 @@ def login():
 
         return jsonify({
             "success": True,
-            "message": "Login successful.",
+            "message": "Login successfull.",
             "user_id": user["user_id"],
             "username": user["username"]
         })
-
     return jsonify({
         "success": False,
         "message": "Invalid username or password."
     }), 401
 
-
-
 if __name__ == "__main__":
-
-
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True
-    )
-#_______________________________________________________________________
+    app.run()
